@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mood Climate — 情绪气象 · 三个版本</title>
+<style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+        min-height: 100vh;
+        background: #0a0d14;
+        background-image:
+            radial-gradient(ellipse at 20% 0%, rgba(80, 110, 180, 0.16), transparent 55%),
+            radial-gradient(ellipse at 85% 100%, rgba(180, 120, 80, 0.12), transparent 55%);
+        font-family: -apple-system, 'SF Pro Display', 'PingFang SC', 'Segoe UI', system-ui, sans-serif;
+        color: #fff;
+        display: flex; flex-direction: column;
+        align-items: center; justify-content: center;
+        padding: 48px 22px;
+        -webkit-font-smoothing: antialiased;
+    }
+    header { text-align: center; margin-bottom: 42px; }
+    header span {
+        font-size: 10px; letter-spacing: 6px; font-weight: 700;
+        color: rgba(255,255,255,0.45);
+    }
+    header h1 {
+        font-size: clamp(34px, 6vw, 54px);
+        font-weight: 200; margin-top: 12px; letter-spacing: 1px;
+    }
+    header p {
+        margin-top: 14px;
+        font-size: 13px; line-height: 1.8;
+        color: rgba(255,255,255,0.55);
+        max-width: 520px;
+    }
+    .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 320px));
+        gap: 20px;
+        justify-content: center;
+        width: 100%;
+        max-width: 1060px;
+    }
+    a.card {
+        display: block;
+        text-decoration: none; color: #fff;
+        border-radius: 24px;
+        padding: 26px 26px 22px;
+        background: rgba(255,255,255,0.06);
+        border: 1px solid rgba(255,255,255,0.14);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        box-shadow: 0 24px 60px rgba(0,0,0,0.35);
+        transition: transform 0.25s ease, background 0.25s ease, border-color 0.25s ease;
+        position: relative; overflow: hidden;
+    }
+    a.card::before {
+        content: '';
+        position: absolute; top: 0; left: 12%; right: 12%; height: 1px;
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.5), transparent);
+    }
+    a.card:hover {
+        transform: translateY(-5px);
+        background: rgba(255,255,255,0.1);
+        border-color: rgba(255,255,255,0.26);
+    }
+    .swatch {
+        height: 92px; border-radius: 14px;
+        margin-bottom: 18px;
+        border: 1px solid rgba(255,255,255,0.12);
+    }
+    .sw-a { background:
+        linear-gradient(180deg, rgba(90,130,170,0.55), rgba(60,90,110,0.35)),
+        linear-gradient(120deg, #5a7a94 0%, #7d9a85 45%, #46604e 100%); }
+    .sw-b { background:
+        linear-gradient(180deg, #1b2947 0%, #3d5578 46%, #c47f4e 82%, #f2b96a 100%); }
+    .sw-c { background:
+        radial-gradient(ellipse at 30% 30%, rgba(255,178,96,0.7), transparent 60%),
+        radial-gradient(ellipse at 75% 70%, rgba(120,140,255,0.5), transparent 60%),
+        #0d0f1a; }
+    .tag {
+        font-size: 9px; letter-spacing: 3px; font-weight: 700;
+        color: rgba(255,255,255,0.45);
+    }
+    h2 { font-size: 21px; font-weight: 500; margin: 7px 0 10px; }
+    .desc {
+        font-size: 12.5px; line-height: 1.75; font-weight: 300;
+        color: rgba(255,255,255,0.66);
+        min-height: 4.5em;
+    }
+    .feat {
+        margin-top: 13px; padding-top: 13px;
+        border-top: 1px solid rgba(255,255,255,0.1);
+        font-size: 11px; line-height: 1.9;
+        color: rgba(255,255,255,0.5);
+    }
+    footer {
+        margin-top: 40px;
+        font-size: 11px; letter-spacing: 1px;
+        color: rgba(255,255,255,0.35);
+        text-align: center; line-height: 2;
+    }
+</style>
+</head>
+<body>
+    <header>
+        <span>MOOD CLIMATE</span>
+        <h1>情绪气象 · 选一个壳</h1>
+        <p>同一套天气引擎（放晴 / 彩虹 / 落雨 / 落雪 / 冰雹 / 雷暴 · 情绪映射 · 陀螺仪与触摸视差 · 棱镜放大镜），三种视觉方向。点进去玩，选中哪个就落地哪个——都是单文件，直接拿走。</p>
+    </header>
+    <div class="grid">
+        <a class="card" href="./雹雷晴虹A-琉璃.html">
+            <div class="swatch sw-a"></div>
+            <div class="tag">VARIANT A · 主打</div>
+            <h2>琉璃 · Inner Weather</h2>
+            <p class="desc">照片背景 + liquid glass。六种情绪天气：放晴 / 彩虹 / 落雨（玻璃上折射倒像的水珠、蠕滑、积水）/ 落雪（软雪三档景深 + 卡片积雪）/ 冰雹 / 雷暴。天气给照片调色，可换背景图（内置四张 / 双击上传）。</p>
+            <div class="feat">彩虹三风格：霓光 / 雾虹 / 暮虹 · 冰雹两风格：琉璃珠 / 碎冰暴<br>谷雾两层 · film grain · 天气化棱镜 · 雷击震窗</div>
+        </a>
+        <a class="card" href="./雹雷晴虹B-观测站.html">
+            <div class="swatch sw-b"></div>
+            <div class="tag">VARIANT B</div>
+            <h2>观测站 · Valley Observatory</h2>
+            <p class="desc">纯程序化山谷，无图片依赖。六种天气换的是整个山谷的时辰：破晓金 / 晨雨初霁 / 青灰落雨 / 昏白落雪 / 铅灰白昼 / 暗夜放电。山脊积雹积雪、云内闪、星空卫星、观测卡片挂水珠。</p>
+            <div class="feat">彩虹三风格：霓光 / 雾虹 / 月虹（夜空银白）<br>仪表感观测站 UI · 天气化棱镜</div>
+        </a>
+        <a class="card" href="./雹雷晴虹C-流光.html">
+            <div class="swatch sw-c"></div>
+            <div class="tag">VARIANT C</div>
+            <h2>流光 · Flux</h2>
+            <p class="desc">aurora mesh gradient 动态底色，六种情绪各一套色板、整片光跟着流动。最「visionOS 壁纸」的一版，暗色梦幻，光尘 bokeh，雨雪落在流光上。</p>
+            <div class="feat">彩虹三风格：霓光 / 虹彩（全息箔）/ 暮虹<br>透镜取样流光背景，零跨域</div>
+        </a>
+    </div>
+    <footer>
+        情绪 → 天气映射都在各文件的 WEATHERS 表 · 接情绪引擎时调 setWeather(key)<br>
+        引擎参考：codrops RainEffect（水珠物理）/ rainyday.js（倒像切片）/ raindrop-fx / NOAA 冰雹微物理 / RMetS·NWS 彩虹光学 / Alexander's band
+    </footer>
+</body>
+</html>
