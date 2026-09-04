@@ -107,14 +107,14 @@
     <header>
         <span>MOOD CLIMATE</span>
         <h1>情绪气象 · 选一个壳</h1>
-        <p>同一套天气引擎（放晴 / 彩虹 / 落雨 / 落雪 / 冰雹 / 雷暴 · 情绪映射 · 陀螺仪与触摸视差 · 棱镜放大镜），三种视觉方向。点进去玩，选中哪个就落地哪个——都是单文件，直接拿走。</p>
+        <p>同一套天气引擎（放晴 / 彩虹 / 落雨 / 落雪 / 冰雹 / 雷暴 · 情绪映射 · 陀螺仪与触摸视差 · 棱镜放大镜 · 噪声积云），三种视觉方向。都是单文件，直接拿走；接情绪引擎调 setWeather(key)。</p>
     </header>
     <div class="grid">
         <a class="card" href="./雹雷晴虹A-琉璃.html">
             <div class="swatch sw-a"></div>
             <div class="tag">VARIANT A · 主打</div>
             <h2>琉璃 · Inner Weather</h2>
-            <p class="desc">照片背景 + liquid glass。六种情绪天气：放晴 / 彩虹 / 落雨（玻璃上折射倒像的水珠、蠕滑、积水）/ 落雪（软雪三档景深 + 卡片积雪）/ 冰雹 / 雷暴。天气给照片调色，可换背景图（内置四张 / 双击上传）。</p>
+            <p class="desc">照片背景 + liquid glass。六种情绪天气：放晴（fbm 积云在照片的天空里漂，遮日时光一起暗）/ 彩虹 / 落雨（玻璃上折射倒像的水珠、蠕滑、积水）/ 落雪（软雪三档景深 + 卡片积雪，切走时化雪滴水）/ 冰雹（乳白冰粒，卡片、地面、棱镜上都会弹）/ 雷暴（闪电照亮水珠、棱镜与卡片描边）。天气给照片调色，可换背景图（内置四张 / 双击上传）。</p>
             <div class="feat">彩虹三风格：霓光 / 雾虹 / 暮虹 · 冰雹两风格：琉璃珠 / 碎冰暴<br>谷雾两层 · film grain · 天气化棱镜 · 雷击震窗</div>
         </a>
         <a class="card" href="./雹雷晴虹B-观测站.html">
@@ -134,7 +134,7 @@
     </div>
     <footer>
         情绪 → 天气映射都在各文件的 WEATHERS 表 · 接情绪引擎时调 setWeather(key)<br>
-        引擎参考：codrops RainEffect（水珠物理）/ rainyday.js（倒像切片）/ raindrop-fx / NOAA 冰雹微物理 / RMetS·NWS 彩虹光学 / Alexander's band
+        来源与致谢见 CREDITS.md：codrops RainEffect（水珠物理思路）/ raindrop-fx（折射画法参考）/ NOAA 冰雹结构 / RMetS·NWS 彩虹光学 / iOS 天气的多层云与整场白闪（视觉参考）
     </footer>
 </body>
 </html>

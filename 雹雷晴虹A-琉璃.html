@@ -65,7 +65,7 @@
             rgba(255,231,178,0.5) 20%,
             rgba(255,214,140,0.18) 44%,
             transparent 66%);
-        opacity: 0;              /* 不走 CSS 过渡：JS 逐帧缓动，云遮日时跟着暗 */
+        opacity: 0; transition: opacity 3s ease;
         pointer-events: none;
         mix-blend-mode: screen;
         will-change: transform;
@@ -79,13 +79,12 @@
         opacity: 0;
         pointer-events: none;
         mix-blend-mode: screen;
+        transition: opacity 3s ease;
         will-change: transform;
     }
 
     canvas.layer { position: fixed; inset: 0; pointer-events: none; }
     #canvas-cloud   { z-index: 3; }
-    /* 晴天的云只做加亮（screen）：白天空上不会变成灰纸片，蓝天上才显白 */
-    #canvas-cloud-lit { z-index: 3; mix-blend-mode: screen; }
     #canvas-rainbow { z-index: 4; }
     #canvas-flare   { z-index: 5; }
     #canvas-fx      { z-index: 7; }
@@ -333,7 +332,6 @@
 <div class="ray" id="ray-b"></div>
 
 <canvas class="layer" id="canvas-cloud"></canvas>
-<canvas class="layer" id="canvas-cloud-lit"></canvas>
 <canvas class="layer" id="canvas-rainbow"></canvas>
 <canvas class="layer" id="canvas-flare"></canvas>
 <canvas class="layer" id="canvas-fx"></canvas>
@@ -404,7 +402,7 @@ const WEATHERS = {
         desc: '心情平静。云在退场，光斑一粒一粒落回地面，系统各项指标恢复安稳。',
         bgFilter: 'brightness(1.06) saturate(1.12)',
         tint: { bg: 'linear-gradient(180deg, rgba(255,214,140,0.14), rgba(255,178,102,0.08))', op: 1 },
-        cloud: { count: 4, alpha: 0.86, dark: 0, low: 0 },
+        cloud: { count: 3, alpha: 0.14, dark: 0 },
         sun: 1, ray: 0.5, rainbow: 0, flare: 1,
         hail: 0, rain: 0, bolt: 0, dust: 1
     },
@@ -413,7 +411,7 @@ const WEATHERS = {
         desc: '心情很好。雨刚停，水汽还悬在半空，光走进去排成了七色的队。',
         bgFilter: 'brightness(1.03) saturate(1.18)',
         tint: { bg: 'linear-gradient(180deg, rgba(160,200,255,0.1), rgba(255,214,160,0.1))', op: 1 },
-        cloud: { count: 5, alpha: 0.85, dark: 0.08, low: 0.2 },
+        cloud: { count: 5, alpha: 0.18, dark: 0 },
         sun: 0.75, ray: 0.32, rainbow: 1, flare: 0.5,
         hail: 0, rain: 0.16, bolt: 0, dust: 0.7,
         /* 三种真实存在的虹：经典双虹 / fogbow 白雾虹 / 日落红虹 */
@@ -424,7 +422,7 @@ const WEATHERS = {
         desc: '有点烦躁。对流太强的夏天下午，砸下来的都是没说出口的话，磕在玻璃上弹开，不肯化。',
         bgFilter: 'brightness(0.62) saturate(0.55) contrast(1.05)',
         tint: { bg: 'linear-gradient(180deg, rgba(120,140,165,0.22), rgba(40,52,68,0.3))', op: 1 },
-        cloud: { count: 4, alpha: 0.92, dark: 0.5, low: 0.8 },
+        cloud: { count: 7, alpha: 0.3, dark: 0.4 },
         sun: 0, ray: 0, rainbow: 0, flare: 0,
         hail: 1, rain: 0.14, bolt: 0, dust: 0,
         styles: { crystal: '琉璃珠', shatter: '碎冰暴' }
@@ -434,7 +432,7 @@ const WEATHERS = {
         desc: '情绪激烈。云层正在放电，每一道闪光都是一次没压住的脾气，请勿靠近核心区。',
         bgFilter: 'brightness(0.4) saturate(0.5) contrast(1.12) hue-rotate(-8deg)',
         tint: { bg: 'linear-gradient(180deg, rgba(60,50,110,0.34), rgba(8,6,16,0.5))', op: 1 },
-        cloud: { count: 4, alpha: 0.95, dark: 0.62, low: 1 },
+        cloud: { count: 8, alpha: 0.4, dark: 0.6 },
         sun: 0, ray: 0, rainbow: 0, flare: 0,
         hail: 0, rain: 1.4, bolt: 1, dust: 0, glassdrops: 0.8
     },
@@ -444,7 +442,7 @@ const WEATHERS = {
         desc: '有点难过。雨不大也不小，就是不停，玻璃上的水珠一颗一颗排着队往下走。',
         bgFilter: 'brightness(0.72) saturate(0.7)',
         tint: { bg: 'linear-gradient(180deg, rgba(90,115,150,0.2), rgba(40,55,75,0.26))', op: 1 },
-        cloud: { count: 4, alpha: 0.9, dark: 0.42, low: 0.7 },
+        cloud: { count: 6, alpha: 0.26, dark: 0.26 },
         sun: 0, ray: 0, rainbow: 0, flare: 0,
         hail: 0, rain: 0.95, bolt: 0, dust: 0, glassdrops: 1
     },
@@ -453,7 +451,7 @@ const WEATHERS = {
         desc: '心很静。雪没有声音，一层一层把边角都盖圆了，世界的音量被调到了最低。',
         bgFilter: 'brightness(0.9) saturate(0.5) contrast(0.94)',
         tint: { bg: 'linear-gradient(180deg, rgba(190,205,225,0.18), rgba(140,155,180,0.2))', op: 1 },
-        cloud: { count: 4, alpha: 0.85, dark: 0.26, low: 0.6 },
+        cloud: { count: 6, alpha: 0.32, dark: 0.06 },
         sun: 0, ray: 0, rainbow: 0, flare: 0,
         hail: 0, rain: 0, bolt: 0, dust: 0, snow: 1
     }
@@ -467,9 +465,6 @@ const ENVIRONMENTS = [
     'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&q=80&w=2070'
 ];
 let envIdx = 0;
-/* 各内置照片的天空线（照片高度的比例，线以下是山/楼/树）：云只在线以上活动。自定义照片默认 0.35 */
-const ENV_SKY = [0.22, 0.18, 0.38, 0.3];
-let skyFrac = ENV_SKY[0];
 
 /* ════════════════════════════════════════════
    1. 全局状态 + 视差（陀螺仪 / 鼠标 / idle 光漂移）
@@ -536,17 +531,14 @@ function stepParallax(dt, now) {
 
 const $ = id => document.getElementById(id);
 const cvs = {
-    cloud: $('canvas-cloud'), lit: $('canvas-cloud-lit'), rainbow: $('canvas-rainbow'),
+    cloud: $('canvas-cloud'), rainbow: $('canvas-rainbow'),
     flare: $('canvas-flare'), fx: $('canvas-fx'), bolt: $('canvas-bolt')
 };
 const ctx = {};
 for (const k in cvs) ctx[k] = cvs[k].getContext('2d');
 
 function resize() {
-    const vwWas = vw;
     vw = innerWidth; vh = innerHeight;
-    /* 云的尺寸按视口算：视口变了重新铺（含首帧视口为 0 的情况） */
-    if (typeof clouds !== 'undefined' && vw !== vwWas) clouds.forEach(c => c.reset(true));
     const dpr = Math.min(devicePixelRatio || 1, 2);
     for (const k in cvs) {
         cvs[k].width = Math.round(vw * dpr);
@@ -602,119 +594,9 @@ function applyDomParallax() {
 }
 
 /* ════════════════════════════════════════════
-   2. 云 —— fbm 噪声长出来的积云 sprite（顶亮底灰的自遮蔽），
-      按层深各自速度漂 + 视差；遮到太阳时阳光 / 光柱 / 光斑一起暗下去。
-      做法参考 iOS 天气的多层软云 sprite，不再是几团模糊圆。
+   2. 云
    ════════════════════════════════════════════ */
-const CLOUD_P = { gain: 2.4, warp: 0.09, puffs: 9, occl: 1.4, bottom: 0.5, edge: 0.8, scale: 70, ramp: 3, mod: 0.4 };
-function makeNoise(seed) {
-    const N = 128, lat = new Float32Array(N * N);
-    let s = (seed >>> 0) || 1;
-    const rnd = () => { s ^= s << 13; s ^= s >>> 17; s ^= s << 5; return ((s >>> 0) % 100000) / 100000; };
-    for (let i = 0; i < N * N; i++) lat[i] = rnd();
-    const fn = (x, y) => {
-        const xi = Math.floor(x), yi = Math.floor(y);
-        const fx = x - xi, fy = y - yi;
-        const ux = fx * fx * (3 - 2 * fx), uy = fy * fy * (3 - 2 * fy);
-        const x0 = xi & (N - 1), x1 = (xi + 1) & (N - 1), y0 = yi & (N - 1), y1 = (yi + 1) & (N - 1);
-        const a = lat[y0 * N + x0], b = lat[y0 * N + x1], c = lat[y1 * N + x0], d = lat[y1 * N + x1];
-        return a + (b - a) * ux + (c - a) * uy + (a - b - c + d) * ux * uy;
-    };
-    fn.rnd = rnd;
-    return fn;
-}
-function fbm(noise, x, y, oct) {
-    let v = 0, amp = 0.5, f = 1, norm = 0;
-    for (let i = 0; i < oct; i++) { v += noise(x * f, y * f) * amp; norm += amp; amp *= 0.5; f *= 2.07; }
-    return v / norm;
-}
-/* 一朵积云：
-   · 包络：一串小圆沿拱弧叠成花椰菜形 + 平底（积云的底是凝结高度切出来的一条线）
-   · 噪声：低频一层扭包络（domain warp）、高频五层剪出边缘絮状与内部疏密
-   · 光照：正上方更厚的地方在下面投影（自遮蔽），阴影带一点天蓝
-   sprite 512×256，alphaMap 留着给「遮日」查像素 */
-function makeCloudSprite(seed, P) {
-    P = Object.assign({}, CLOUD_P, P || {});
-    const Wd = 512, Ht = 256;
-    const c = document.createElement('canvas');
-    c.width = Wd; c.height = Ht;
-    const g = c.getContext('2d');
-    const img = g.createImageData(Wd, Ht), px = img.data;
-    const noise = makeNoise(seed);
-    const rnd = noise.rnd;
-    const np = P.puffs + (rnd() * 4 | 0);
-    const puffs = [];
-    const base = 0.72 + rnd() * 0.06;
-    const left = 0.14 + rnd() * 0.1, right = 0.86 - rnd() * 0.1;
-    for (let i = 0; i < np; i++) {
-        const t = i / (np - 1);
-        const x = left + (right - left) * t + (rnd() - 0.5) * 0.06;
-        const arch = Math.sin(t * Math.PI);
-        const r = 0.09 + rnd() * 0.1 + arch * 0.06;
-        const y = base - r * 0.9 - arch * (0.12 + rnd() * 0.12);
-        puffs.push({ x, y, r });
-    }
-    const scaleN = P.scale + rnd() * 30;
-    const ox = rnd() * 100, oy = rnd() * 100;
-    const wx = rnd() * 100, wy = rnd() * 100;
-    const envelope = (nx, ny) => {
-        let e = 0;
-        for (const p of puffs) {
-            const dx = (nx - p.x) / p.r, dy = (ny - p.y) / (p.r * 0.85);
-            const q = 1 - (dx * dx + dy * dy);
-            if (q > e) e = q;
-        }
-        if (ny > base) e -= (ny - base) * 10;
-        return Math.max(0, e);
-    };
-    const dens = (x, y) => {
-        const w1 = fbm(noise, x / 160 + wx, y / 160 + wy, 3) - 0.5;
-        const w2 = fbm(noise, x / 160 + wy, y / 160 + wx + 7, 3) - 0.5;
-        const nx = x / Wd + w1 * P.warp, ny = y / Ht + w2 * P.warp * 1.6;
-        const e = envelope(nx, ny);
-        if (e <= 0) return 0;
-        const n = fbm(noise, x / scaleN + ox, y / scaleN + oy, 5);
-        const v = (e * 1.0 + (n - 0.5) * P.gain - 0.12) * P.ramp;
-        return Math.max(0, Math.min(1, v));
-    };
-    const alphaMap = new Float32Array(Wd * Ht);
-    /* 阴影 sprite：只有被遮的那部分像素，晴天时用正常混合压在蓝天上（加亮层画不出比天暗的云底） */
-    const shC = document.createElement('canvas');
-    shC.width = Wd; shC.height = Ht;
-    const shG = shC.getContext('2d');
-    const shImg = shG.createImageData(Wd, Ht), spx = shImg.data;
-    const sh = [166, 182, 212];
-    for (let y = 0; y < Ht; y++) {
-        for (let x = 0; x < Wd; x++) {
-            const d = dens(x, y);
-            const i = (y * Wd + x) * 4;
-            if (d <= 0.002) { px[i + 3] = 0; continue; }
-            const a1 = dens(x, y - 6), a2 = dens(x + 3, y - 13), a3 = dens(x - 5, y - 22);
-            /* 只有上方比这里更厚才算被遮：内部不整片压暗，边缘不会反过来发亮 */
-            const occl = Math.max(0, (a1 * 0.45 + a2 * 0.35 + a3 * 0.2) - d) * 2.2 * P.occl;
-            const ny = y / Ht;
-            const m = (fbm(noise, x / 48 + oy, y / 48 + ox, 3) - 0.5) * P.mod * d;
-            let shade = occl + Math.max(0, ny - 0.4) * P.bottom * d + Math.max(0, m) + (1 - d) * 0.06;
-            shade = Math.min(0.74, shade);
-            px[i] = 255 + (sh[0] - 255) * shade;
-            px[i + 1] = 255 + (sh[1] - 255) * shade;
-            px[i + 2] = 255 + (sh[2] - 255) * shade;
-            const a = Math.pow(d, P.edge);
-            px[i + 3] = a * 255;
-            alphaMap[y * Wd + x] = a;
-            spx[i] = 120; spx[i + 1] = 138; spx[i + 2] = 172;
-            spx[i + 3] = Math.min(255, shade * a * 1.5 * 255);
-        }
-    }
-    g.putImageData(img, 0, 0);
-    shG.putImageData(shImg, 0, 0);
-    c.alphaMap = alphaMap;
-    c.shadow = shC;
-    return c;
-}
-const cloudSprites = [makeCloudSprite(11), makeCloudSprite(23), makeCloudSprite(37), makeCloudSprite(59)];
-/* 阴天的云盖：几团大而软的雾状 sprite 铺成一层低压的云层（积云 sprite 只做上面的结构） */
-function makeDeckSprite() {
+function makeCloudSprite() {
     const c = document.createElement('canvas');
     c.width = 480; c.height = 240;
     const g = c.getContext('2d');
@@ -729,21 +611,7 @@ function makeDeckSprite() {
     }
     return c;
 }
-const deckSprites = [makeDeckSprite(), makeDeckSprite(), makeDeckSprite()];
-const deck = Array.from({ length: 6 }, (_, i) => ({ sp: deckSprites[i % 3], x: Math.random(), y: -0.1 + Math.random() * 0.35, sc: 2 + Math.random() * 1.6, v: 0.04 + Math.random() * 0.06, o: 0.6 + Math.random() * 0.4 }));
-/* 照片天空的亮度（顶上一带的平均亮度）：亮天上不画云底阴影（会成灰纸片），蓝天上才画 */
-let skyLum = 0.7;
-function measureSky() {
-    try {
-        const c = document.createElement('canvas'); c.width = 32; c.height = 8;
-        const g = c.getContext('2d');
-        g.drawImage(bgImg, 0, 0, bgImg.naturalWidth, bgImg.naturalHeight * Math.max(0.05, skyFrac * 0.8), 0, 0, 32, 8);
-        const d = g.getImageData(0, 0, 32, 8).data;
-        let l = 0;
-        for (let i = 0; i < d.length; i += 4) l += (d[i] * 0.299 + d[i + 1] * 0.587 + d[i + 2] * 0.114) / 255;
-        skyLum = l / (d.length / 4);
-    } catch (e) { skyLum = 0.7; }
-}
+const cloudSprites = [makeCloudSprite(), makeCloudSprite(), makeCloudSprite()];
 
 /* ── 谷间雾层：两层软雾横向漂移（近快远慢），湿天气才现身 ── */
 function makeFogSprite() {
@@ -788,132 +656,54 @@ function drawFog(g, dt) {
 }
 class Cloud {
     constructor(i) {
-        this.sprite = cloudSprites[i % cloudSprites.length];
-        this.depth = 0.35 + Math.random() * 0.65;   /* 远 0.35 … 近 1：近的大、快、视差多 */
-        this.w = vw * 0.5;
+        this.sprite = cloudSprites[i % 3];
+        this.depth = 0.4 + Math.random() * 0.6;   /* 视差深度 */
         this.reset(true);
     }
     reset(init) {
-        /* 位置与尺寸都相对「天空」：t = 在天空里的高度比例，hs = 云高 / 天空高 */
-        this.t = 0.1 + Math.random() * 0.62;
-        this.hs = (0.55 + Math.random() * 0.75) * (0.6 + this.depth * 0.55);
-        this.x = init ? Math.random() * (vw + this.w) - this.w : -this.w - Math.random() * vw * 0.3;
-        /* 慢：一朵云横穿屏幕要两三分钟（iOS 天气那种「没在动、回头一看位置变了」的速度） */
-        this.v = (0.05 + Math.random() * 0.12) * (0.4 + this.depth * 0.8) * (vw / 1280);
-        this.o = 0.7 + Math.random() * 0.3;
+        this.scale = 1.2 + Math.random() * 2.4;
+        this.x = init ? Math.random() * vw - 240 : -480 * this.scale;
+        this.y = -60 + Math.random() * vh * 0.4;
+        this.v = 0.1 + Math.random() * 0.28;
+        this.o = 0.5 + Math.random() * 0.5;
     }
     step(dt) {
-        this.x += (this.v + wind.x * 0.04 * this.depth) * (dt / 16);
-        if (this.x > vw + 40) this.reset(false);
+        this.x += (this.v + wind.x * 0.06) * (dt / 16);
+        if (this.x > vw + 60) this.reset(false);
     }
 }
-const clouds = Array.from({ length: 10 }, (_, i) => new Cloud(i));
-let sunCover = 0;      /* 云遮太阳的程度 0..1（平滑） */
-
-/* 天空线在屏幕上的 y：把照片比例按 cover 裁切换算过来 */
-function skyLineY() {
-    const box = bgBox();
-    if (!bgImgReady || !bgImg.naturalWidth) return skyFrac * vh;
-    const iw = bgImg.naturalWidth, ih = bgImg.naturalHeight;
-    const sc = Math.max(box.w / iw, box.h / ih);
-    return box.y + (box.h - ih * sc) / 2 + skyFrac * ih * sc;
-}
+const clouds = Array.from({ length: 8 }, (_, i) => new Cloud(i));
 
 function drawClouds(dt) {
-    const g = ctx.cloud, gl = ctx.lit;
+    const g = ctx.cloud;
     g.clearRect(0, 0, vw, vh);
-    gl.clearRect(0, 0, vw, vh);
-    let alpha = 0, dark = 0, count = 0, low = 0;
+    let alpha = 0, dark = 0, count = 0;
     for (const k in W) {
         const p = WEATHERS[k].cloud, w = W[k];
-        alpha += p.alpha * w; dark += p.dark * w; count += p.count * w; low += (p.low || 0) * w;
+        alpha += p.alpha * w; dark += p.dark * w; count += p.count * w;
     }
+    if (alpha < 0.01) return;
     /* 彩虹进行时：云随雨停逐渐散掉（走向放晴） */
     const cloudFade = 1 - Math.min(rbAge / 32, 0.5) * W.rainbow;
     const effCount = count * cloudFade;
-    /* 阴天云压得低（天空线往下放），晴天守着照片的天空 */
-    const hz = skyLineY() + low * vh * 0.22;
-    const skyH = Math.max(vh * 0.14, hz);
-    /* 晴云走加亮层、阴云走正常层：按「暗度」在两层之间分配 */
-    const kDark = Math.min(1, dark * 2.2);
-    /* 太阳的屏幕位置（与光斑、镜面光轴同源） */
-    const sx = vw * 0.92 + par.x * 34, sy = vh * 0.06 + par.y * 22;
-    let cover = 0;
-    /* 云底阴影的份量：蓝天上有，亮白天上没有（亮天只能画出灰纸片） */
-    const shA = Math.max(0, Math.min(1, (0.82 - skyLum) * 3.2)) * 0.7 * (1 - kDark);
-    /* 阴天的云盖：先铺一层软雾状的低云层，积云在上面做结构 */
-    if (kDark > 0.01 && alpha >= 0.01) {
-        deck.forEach(dk => {
-            dk.x = (dk.x + dk.v * (dt / 16) / vw) % 1.6;
-            const w = vw * dk.sc, h = w / 2;
-            const x = (dk.x - 0.6) * vw + par.x * -12, y = vh * (dk.y + 0.1 * low) - h * 0.5 + par.y * -8;
-            g.globalAlpha = alpha * kDark * dk.o * 0.85;
-            g.drawImage(dk.sp, x, y, w, h);
-        });
-    }
     clouds.forEach((c, i) => {
-        const h = Math.min(vw * 0.62, skyH * c.hs * (1 + 0.5 * low));
-        c.w = h * 2;
-        c.step(dt);
-        if (alpha < 0.01) return;
         /* 边界那朵云按小数部分渐隐，不整朵 pop 掉 */
         const edgeA = Math.max(0, Math.min(1, effCount - i));
         if (edgeA <= 0.003) return;
-        const w = c.w;
-        const x = c.x + par.x * -18 * c.depth;
-        const y = c.t * skyH - h * 0.5 + par.y * -10 * c.depth;
-        const a = alpha * cloudFade * c.o * edgeA;
-        if (kDark < 0.995) {
-            gl.globalAlpha = a * (1 - kDark); gl.drawImage(c.sprite, x, y, w, h);
-            if (shA > 0.01) { g.globalAlpha = a * shA; g.drawImage(c.sprite.shadow, x, y, w, h); }
-        }
-        if (kDark > 0.005) { g.globalAlpha = a * kDark; g.drawImage(c.sprite, x, y, w, h); }
-        /* 遮日：太阳落在这朵云的哪个像素上 */
-        const u = (sx - x) / w, v = (sy - y) / h;
-        if (u > 0 && u < 1 && v > 0 && v < 1) {
-            const am = c.sprite.alphaMap[((v * 256) | 0) * 512 + ((u * 512) | 0)];
-            cover = Math.max(cover, am * a);
-        }
+        g.globalAlpha = alpha * cloudFade * c.o * edgeA;
+        g.drawImage(c.sprite,
+            c.x + par.x * -18 * c.depth, c.y + par.y * -10 * c.depth,
+            480 * c.scale, 240 * c.scale);
     });
-    g.globalAlpha = 1; gl.globalAlpha = 1;
-    if (alpha >= 0.01) {
-        /* 天空线以下很宽的一段软渐隐：云不压到山和楼上，也没有一条切口 */
-        const soft = Math.min(vh * (0.26 + 0.1 * low), skyH * (0.5 + 0.3 * low));
-        [g, gl].forEach(gg => {
-            gg.save();
-            gg.globalCompositeOperation = 'destination-out';
-            const mg = gg.createLinearGradient(0, hz - soft, 0, hz + soft * 0.1);
-            mg.addColorStop(0, 'rgba(0,0,0,0)');
-            mg.addColorStop(0.5, 'rgba(0,0,0,0.45)');
-            mg.addColorStop(1, 'rgba(0,0,0,1)');
-            gg.fillStyle = mg;
-            gg.fillRect(0, hz - soft, vw, vh - hz + soft);
-            gg.restore();
-        });
-        if (dark > 0.02) {
-            g.save();
-            g.globalCompositeOperation = 'source-atop';
-            const dg = g.createLinearGradient(0, 0, 0, vh);
-            dg.addColorStop(0, `rgba(30,34,52,${dark * 0.7})`);
-            dg.addColorStop(1, `rgba(24,26,40,${Math.min(1, dark * 1.05)})`);
-            g.fillStyle = dg;
-            g.fillRect(0, 0, vw, vh);
-            g.restore();
-        }
+    g.globalAlpha = 1;
+    if (dark > 0.02) {
+        g.save();
+        g.globalCompositeOperation = 'source-atop';
+        g.fillStyle = `rgba(24, 26, 40, ${dark})`;
+        g.fillRect(0, 0, vw, vh);
+        g.restore();
     }
-    sunCover += (cover - sunCover) * 0.05 * (dt / 16);
     drawFog(g, dt || 16);
-}
-
-/* 太阳与光柱：目标值由天气定，逐帧缓动（约 3 秒），云遮日时一起暗 */
-let sunBase = 1, rayBase = 0.5, sunNow = 0, rayNow = 0;
-function applySunCover(dt) {
-    const k = 0.016 * (dt / 16);
-    sunNow += (sunBase * (1 - 0.75 * sunCover) - sunNow) * k;
-    rayNow += (rayBase * (1 - 0.9 * sunCover) - rayNow) * k;
-    $('sun').style.opacity = sunNow.toFixed(3);
-    const r = rayNow.toFixed(3);
-    $('ray-a').style.opacity = r; $('ray-b').style.opacity = r;
 }
 
 /* ════════════════════════════════════════════
@@ -1130,7 +920,7 @@ let flareT = 0;
 function drawFlare(dt) {
     const g = ctx.flare;
     g.clearRect(0, 0, vw, vh);
-    const vis = weightOf('flare') * (1 - 0.85 * sunCover);
+    const vis = weightOf('flare');
     if (vis < 0.02) return;
     flareT += dt * 0.0006;
     const breathe = 0.75 + 0.25 * Math.sin(flareT);
@@ -1162,8 +952,6 @@ function drawFlare(dt) {
       碎冰片 · 水渍 · 融化白汽（夏天的对流逻辑）
    ════════════════════════════════════════════ */
 function makeHailSprite() {
-    /* 冰雹是乳白的、比暗天亮得多的一粒（不是透明玻璃珠）：
-       乳白核 + 外圈略透的清冰 + 蓝灰边线 + 左上高光 + 一道洋葱层弧（NOAA 描述的层状结构） */
     const SZ = 64, C = SZ / 2;
     const cv = document.createElement('canvas');
     cv.width = cv.height = SZ;
@@ -1183,36 +971,33 @@ function makeHailSprite() {
     outline();
     g.save();
     g.clip();
-    const body = g.createRadialGradient(C - R * 0.2, C - R * 0.22, 0, C, C, R * 1.3);
-    body.addColorStop(0, 'rgba(255,255,255,0.97)');
-    body.addColorStop(0.42, 'rgba(240,246,253,0.9)');
-    body.addColorStop(0.78, 'rgba(214,230,248,0.8)');
-    body.addColorStop(1, 'rgba(180,205,235,0.7)');
-    g.fillStyle = body;
+    const shell = g.createRadialGradient(C, C, R * 0.1, C, C, R * 1.28);
+    shell.addColorStop(0, 'rgba(235,244,255,0.10)');
+    shell.addColorStop(0.55, 'rgba(225,238,252,0.16)');
+    shell.addColorStop(0.82, 'rgba(240,248,255,0.46)');
+    shell.addColorStop(1, 'rgba(255,255,255,0.06)');
+    g.fillStyle = shell;
     g.fillRect(0, 0, SZ, SZ);
-    /* 洋葱层：一道弧 */
-    g.strokeStyle = 'rgba(255,255,255,0.4)';
+    const nx = C - R * 0.15, ny = C - R * 0.1;
+    const core = g.createRadialGradient(nx, ny, 0, nx, ny, R * 0.62);
+    core.addColorStop(0, 'rgba(255,255,255,0.5)');
+    core.addColorStop(0.55, 'rgba(244,250,255,0.24)');
+    core.addColorStop(1, 'rgba(244,250,255,0)');
+    g.fillStyle = core;
+    g.fillRect(0, 0, SZ, SZ);
+    g.strokeStyle = 'rgba(210,230,250,0.4)';
     g.lineWidth = 2;
     g.beginPath();
-    g.arc(C, C + R * 0.1, R * 0.62, Math.PI * 0.15, Math.PI * 0.85);
+    g.arc(C, C + R * 0.12, R * 0.8, Math.PI * 0.18, Math.PI * 0.82);
     g.stroke();
-    /* 底缘一点透光 */
-    g.fillStyle = 'rgba(255,255,255,0.3)';
-    g.beginPath(); g.arc(C + R * 0.15, C + R * 0.55, R * 0.4, 0, Math.PI * 2); g.fill();
     g.restore();
-    /* 蓝灰边线 */
-    outline();
-    g.strokeStyle = 'rgba(110,145,190,0.55)';
-    g.lineWidth = 1.5;
-    g.stroke();
-    /* 高光 */
-    g.fillStyle = 'rgba(255,255,255,0.95)';
+    g.fillStyle = 'rgba(255,255,255,0.9)';
     g.beginPath();
-    g.ellipse(C - R * 0.42, C - R * 0.45, R * 0.2, R * 0.12, -0.6, 0, Math.PI * 2);
+    g.ellipse(C - R * 0.42, C - R * 0.45, R * 0.16, R * 0.1, -0.6, 0, Math.PI * 2);
     g.fill();
-    g.fillStyle = 'rgba(255,255,255,0.55)';
+    g.fillStyle = 'rgba(255,255,255,0.45)';
     g.beginPath();
-    g.arc(C + R * 0.3, C - R * 0.15, R * 0.08, 0, Math.PI * 2);
+    g.arc(C + R * 0.3, C - R * 0.12, R * 0.07, 0, Math.PI * 2);
     g.fill();
     return cv;
 }
@@ -1775,10 +1560,10 @@ class Hailstone {
             const tx = this.x - vx * 1.5, ty = this.y - this.vy * 1.5;
             const tg = g.createLinearGradient(tx, ty, this.x, this.y);
             tg.addColorStop(0, 'rgba(222,236,250,0)');
-            tg.addColorStop(1, 'rgba(232,242,252,0.36)');
+            tg.addColorStop(1, 'rgba(232,242,252,0.2)');
             g.save();
             g.strokeStyle = tg;
-            g.lineWidth = this.r * 1.2;
+            g.lineWidth = this.r * 1.1;
             g.lineCap = 'round';
             g.beginPath();
             g.moveTo(tx, ty);
@@ -1795,7 +1580,7 @@ function drawHailstone(g, x, y, r, rot, sprite, o) {
     if (r >= 2.6 && gradeReady) {
         g.save();
         g.beginPath(); g.arc(x, y, r * 1.02, 0, Math.PI * 2); g.clip();
-        g.globalAlpha = 0.35 * o;
+        g.globalAlpha = 0.6 * o;
         g.translate(x, y); g.scale(1, -1);
         /* 粒子层整层带着视差平移 (par.x*7, par.y*3)：取样时补回屏幕坐标 */
         drawGradeRegion(g, x + par.x * 7, y + par.y * 3, r * 1.8, r * 1.8, -r * 1.15, -r * 1.15, r * 2.3, r * 2.3);
@@ -2128,7 +1913,7 @@ function fireBolt() {
         strokeBolt(g, br, 3.5, `rgba(150,140,255,${0.11 * wB})`, 18, 'rgba(140,130,255,0.8)');
         strokeBolt(g, br, 0.8, `rgba(255,255,255,${0.55 * wB})`, 0, 'transparent');
     });
-    bolts.push({ cv, life: 1, x: x0, y: y1 * 0.45 });
+    bolts.push({ cv, life: 1, x: x0, y: y1 * 0.45, pts: main });
     wind.gust += (0.8 + Math.random()) * wB;
     cardShake = 4.2 * wB;
 
@@ -2199,7 +1984,7 @@ const lensG = lensCv.getContext('2d');
 const bgImg = new Image();               /* 与 #bg 同源，透镜取样用 */
 bgImg.crossOrigin = 'anonymous';
 let bgImgReady = false;
-bgImg.onload = () => { bgImgReady = true; gradeDirty = true; measureSky(); };
+bgImg.onload = () => { bgImgReady = true; gradeDirty = true; };
 
 function lensSetup() {
     const dpr = Math.min(devicePixelRatio || 1, 2);
@@ -2382,7 +2167,7 @@ function drawLens(dt) {
     if (wClear > 0.05) {
         const sunD = Math.hypot(lens.x - sunX, lens.y - sunY);
         const sunProx = Math.max(0, 1 - sunD / (Math.max(vw, vh) * 0.75));
-        const gA = wClear * (0.25 + 0.75 * sunProx) * (1 - 0.8 * sunCover);
+        const gA = wClear * (0.25 + 0.75 * sunProx);
         lensG.save();
         lensG.globalCompositeOperation = 'lighter';
         const t = performance.now() * 0.0005;
@@ -2583,18 +2368,19 @@ function setWeather(key) {
     em.textContent = p.emoji;
     em.style.transform = 'scale(1.28)';
     setTimeout(() => em.style.transform = 'scale(1)', 330);
-    sunBase = p.sun; rayBase = p.ray;
+    $('sun').style.opacity = p.sun;
+    $('ray-a').style.opacity = p.ray;
+    $('ray-b').style.opacity = p.ray;
     document.querySelectorAll('.mood-btn').forEach(b =>
         b.classList.toggle('active', b.dataset.w === key));
     renderStyleChips();
     setTimeout(updateCardRect, 400);
 }
 
-function setBackground(src, sky) {
+function setBackground(src) {
     $('bg').style.backgroundImage = `url("${src}")`;
     bgImgReady = false;
     bgImg.src = src;          /* 透镜取样同源同步 */
-    skyFrac = sky == null ? 0.35 : sky;
 }
 
 $('dock').addEventListener('click', e => {
@@ -2611,7 +2397,7 @@ $('bg-file').addEventListener('click', e => {
     if (!e.shiftKey) {
         e.preventDefault();
         envIdx = (envIdx + 1) % ENVIRONMENTS.length;
-        setBackground(ENVIRONMENTS[envIdx], ENV_SKY[envIdx]);
+        setBackground(ENVIRONMENTS[envIdx]);
     }
 });
 $('bg-file').addEventListener('change', function () {
@@ -2654,7 +2440,9 @@ function tick(now) {
         rbAge += dt / 1000;
         if (!rbRainStopped && rbAge > 14) {
             rbRainStopped = true;
-            sunBase = 1; rayBase = 0.45;
+            $('sun').style.opacity = 1;
+            $('ray-a').style.opacity = 0.45;
+            $('ray-b').style.opacity = 0.45;
             $('w-desc').textContent = '雨彻底停了。虹在光里又站了一会儿，云散得差不多，就把天空还给太阳。';
         }
     } else {
@@ -2663,8 +2451,8 @@ function tick(now) {
         if (rbAge === 0 && rbRainStopped) rbRainStopped = false;
         if (rbGrow > 0.01 && W.rainbow < 0.5) rbGrow *= 0.96;   /* 下次进入重新显影 */
     }
+    clouds.forEach(c => c.step(dt));
     drawClouds(dt);
-    applySunCover(dt);
     drawRainbow(dt);
     drawFlare(dt);
     spawnParticles(dt);
@@ -2675,7 +2463,7 @@ function tick(now) {
 }
 
 resize();
-setBackground(ENVIRONMENTS[0], ENV_SKY[0]);
+setBackground(ENVIRONMENTS[0]);
 setTimeout(updateCardRect, 80);
 document.querySelector('[data-w="clear"]').classList.add('active');
 $('w-desc').textContent = WEATHERS.clear.desc;
