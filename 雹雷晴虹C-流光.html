@@ -676,7 +676,7 @@ function buildRainbowSprite() {
     g.fillRect(footX - w * 0.1, 0, w * 0.2, h);
     g.globalCompositeOperation = 'source-over';
 
-    rbCache = { cv, bleed: BLEED };
+    rbCache = { cv, bleed: BLEED, cxS: vw * 0.5, cyS: vh * 1.25, rS: vh * 1.25 - apexY };
 }
 
 function drawRainbow(dt) {
@@ -1626,6 +1626,7 @@ function drawBolts(dt, now) {
 /* ════════════════════════════════════════════
    6. 棱镜放大镜 —— 取样对象是流光背景 + 彩虹（无跨域问题）
    ════════════════════════════════════════════ */
+let lensProx = 0;      /* 镜子压在虹弧上的程度（平滑） */
 const lens = { on: false, x: 0, y: 0, D: 190, drag: null };
 const lensCv = $('lens-canvas');
 const lensG = lensCv.getContext('2d');
@@ -1736,40 +1737,50 @@ function drawLens(dt) {
     const ldl = Math.hypot(ldx, ldy) || 1;
     ldx /= ldl; ldy /= ldl;
 
-    /* ② 彩虹层：透镜再色散——虹带拉宽 + RGB 沿光轴分离重影 */
+    /* ② 彩虹层：透过棱镜看虹 = 再色散——虹带被拉宽、RGB 沿光轴分离出重影
+       （虹不是实物，玻璃改变的是光的角度，不是把它「放大」）。
+       镜子压到虹弧上时色散最强，虹被「抓」进镜里；离开弧就只剩淡淡的重影。 */
     const rbVis = weightOf('rainbow');
     if (rbCache && rbGrow > 0.02 && rbVis > 0.02) {
         const B = rbCache.bleed;
-        const sx = rbCache.cv.width / (vw + B * 2);
-        const srcD2 = D / 1.18;
-        const baseA = Math.min(1, rbVis * easeOut(rbGrow));
+        const rsx = rbCache.cv.width / (vw + B * 2);
+        const baseA = Math.min(1, rbVis * easeOut(rbGrow) * (0.3 + (intensity / 100) * 0.7));
+        const rcx = rbCache.cxS + par.x * -30, rcy = rbCache.cyS + par.y * -12;
+        const dist = Math.hypot(lens.x - rcx, lens.y - rcy);
+        const prox = Math.max(0, 1 - Math.abs(dist - rbCache.rS * 0.94) / (rbCache.rS * 0.16));
+        lensProx += (prox - lensProx) * 0.08 * fdt;
+        const tw = performance.now() * 0.0007;
+        const WIDEN = 1.14 + 0.3 * lensProx;
+        const srcR = D / WIDEN;
+        const spread = (8 + 14 * lensProx) * (0.85 + 0.15 * Math.sin(tw * 1.3));
         lensG.save();
         lensG.globalCompositeOperation = 'screen';
-        [[9, 0.5], [0, 0.8], [-9, 0.5]].forEach(([off, aa]) => {
-            lensG.globalAlpha = baseA * aa;
+        [[1, 0.55], [0, 0.85 + 0.45 * lensProx], [-1, 0.55]].forEach(([k, aa]) => {
+            lensG.globalAlpha = Math.min(1, baseA * aa);
             lensG.drawImage(rbCache.cv,
-                (lens.x - srcD2 / 2 + ldx * off + B) * sx,
-                (lens.y - srcD2 / 2 + ldy * off + B) * sx,
-                srcD2 * sx, srcD2 * sx, 0, 0, D, D);
+                (lens.x - srcR / 2 + ldx * spread * k + B) * rsx,
+                (lens.y - srcR / 2 + ldy * spread * k + B) * rsx,
+                srcR * rsx, srcR * rsx, 0, 0, D, D);
         });
+        /* 抓到虹光时，沿光轴甩出一团光谱焦散：位置随拖动、大小随呼吸，没有固定的带 */
+        if (lensProx > 0.03) {
+            const k = 0.16 + 0.05 * Math.sin(tw * 0.9);
+            const fx = R + ldx * k * D, fy = R + ldy * k * D;
+            const fr = D * (0.3 + 0.04 * Math.sin(tw * 1.7));
+            const px = -ldy, py = ldx;                 /* 光轴的法向：光谱沿它排开 */
+            const cols = [[150, 95, 245], [88, 128, 255], [70, 195, 220], [108, 222, 96], [252, 228, 72], [255, 158, 52], [255, 74, 58]];
+            cols.forEach((c, i) => {
+                const u = (i / 6 - 0.5) * fr * 1.3;
+                const gx = fx + px * u, gy = fy + py * u;
+                const gg = lensG.createRadialGradient(gx, gy, 0, gx, gy, fr * 0.55);
+                gg.addColorStop(0, `rgba(${c[0]},${c[1]},${c[2]},${0.26 * lensProx * baseA})`);
+                gg.addColorStop(1, `rgba(${c[0]},${c[1]},${c[2]},0)`);
+                lensG.fillStyle = gg;
+                lensG.beginPath(); lensG.arc(gx, gy, fr * 0.55, 0, Math.PI * 2); lensG.fill();
+            });
+        }
         lensG.restore();
-        /* 棱镜再散射：镜内一道显著光谱带 */
-        lensG.save();
-        lensG.globalCompositeOperation = 'screen';
-        lensG.translate(R, R);
-        lensG.rotate(Math.atan2(ldy, ldx) + Math.PI / 2);
-        const t2 = performance.now() * 0.0006;
-        const bandW = D * 0.6;
-        const spec = lensG.createLinearGradient(0, -bandW / 2, 0, bandW / 2);
-        [[150, 95, 245], [88, 128, 255], [70, 195, 220], [108, 222, 96],
-         [252, 228, 72], [255, 158, 52], [255, 74, 58]].forEach((c, i, arr) => {
-            const t = i / (arr.length - 1);
-            spec.addColorStop(t, `rgba(${c[0]},${c[1]},${c[2]},${(0.2 + 0.05 * Math.sin(t2 + t * 5)) * baseA})`);
-        });
-        lensG.fillStyle = spec;
-        lensG.fillRect(-D, -bandW / 2, D * 2, bandW);
-        lensG.restore();
-    }
+    } else lensProx *= 0.9;
     /* ②b 放晴：ghost 光斑沿光轴排开——拖动透镜它们就在镜内滑（真实 flare 几何）；
        镜子离太阳越近光斑越亮，远了只剩一点点；朝阳那一侧贴着镜缘一层暖雾（veiling glare） */
     const wClearL = W.clear || 0;

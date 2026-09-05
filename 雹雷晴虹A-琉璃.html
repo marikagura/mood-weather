@@ -601,8 +601,9 @@ function makeCloudSprite() {
     c.width = 480; c.height = 240;
     const g = c.getContext('2d');
     for (let i = 0; i < 9; i++) {
-        const x = 70 + Math.random() * 340, y = 90 + Math.random() * 70;
         const r = 45 + Math.random() * 65;
+        /* 圆整个落在画布里：边缘不会被画布裁成一条直线 */
+        const x = r + Math.random() * (480 - 2 * r), y = r + Math.random() * (240 - 2 * r);
         const grad = g.createRadialGradient(x, y, 0, x, y, r);
         grad.addColorStop(0, 'rgba(255,255,255,0.5)');
         grad.addColorStop(1, 'rgba(255,255,255,0)');
@@ -616,11 +617,12 @@ const cloudSprites = [makeCloudSprite(), makeCloudSprite(), makeCloudSprite()];
 /* ── 谷间雾层：两层软雾横向漂移（近快远慢），湿天气才现身 ── */
 function makeFogSprite() {
     const c = document.createElement('canvas');
-    c.width = 900; c.height = 260;
+    c.width = 900; c.height = 460;
     const g = c.getContext('2d');
     for (let i = 0; i < 7; i++) {
-        const x = 80 + Math.random() * 740, y = 70 + Math.random() * 120;
         const r = 90 + Math.random() * 130;
+        /* 圆整个落在画布里：雾带的上下沿不会被裁成直线 */
+        const x = r + Math.random() * (900 - 2 * r), y = r + Math.random() * (460 - 2 * r);
         const grad = g.createRadialGradient(x, y, 0, x, y, r);
         grad.addColorStop(0, 'rgba(235,240,248,0.34)');
         grad.addColorStop(1, 'rgba(235,240,248,0)');
@@ -642,8 +644,9 @@ function drawFog(g, dt) {
     if (fog < 0.01) return;
     fogLayers.forEach(L => {
         L.x = (L.x + L.v * (dt / 16)) % 900;
-        const sw = 900 * L.scale, sh = 260 * L.scale;
-        const y = vh * L.yr + par.y * -8 * (L.sp ? 0.5 : 1);
+        const sw = 900 * L.scale, sh = 460 * L.scale;
+        /* 贴图长高了 200px，往上挪 100px 保持雾带中心不变 */
+        const y = vh * L.yr - 100 * L.scale + par.y * -8 * (L.sp ? 0.5 : 1);
         g.save();
         g.globalAlpha = fog * (L.sp ? 0.55 : 0.8);
         /* 两张接龙，横向无缝循环 */

@@ -7,7 +7,7 @@
 
 | 内容 | 来源 | 许可 | 用在哪里 | 方式 |
 |---|---|---|---|---|
-| 落雨 / 落雪的起点（雨丝、雪片、卡片顶高度场积雪） | 朋友原作《落雨与积水》《落雪与积雪》 | 经作者同意（署名待补） | 三个版本的 rain / snow | 改写：雪片、水珠、融化全部重做，高度场沉积核保留 |
+| 落雨 / 落雪的起点（雨丝、雪片、卡片顶高度场积雪） | wood / 柴 的原作《落雨与积水》《落雪与积雪》 | 经作者同意 | 三个版本的 rain / snow | 改写：雪片、水珠、融化全部重做，高度场沉积核保留 |
 | 玻璃上水珠的物理：随机落点、长大、动量 + 摩擦的蠕滑、拖尾子滴、滑过吞并（面积守恒） | RainEffect，Lucas Bebber for Codrops，https://github.com/codrops/RainEffect | MIT（见 https://tympanus.net/codrops/licensing/） | `GlassDrop` | 参考思路改写，未复制代码 |
 | 雨滴折射画法（倒像切片、暗边显形）的参考 | raindrop-fx，SardineFish，https://github.com/SardineFish/raindrop-fx | MIT | `paintDrop` | 只参考效果，未复制代码 |
 | 三棱镜色散、Snell 折射的参考 | explerify / physandbox / kamilprusko-prism 一类光学模拟器 | 各自许可 | 早期棱镜面板 | 只参考做法，未复制代码 |
