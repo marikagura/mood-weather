@@ -125,15 +125,17 @@
         background: rgba(255, 255, 255, 0.045);
         backdrop-filter: blur(22px) saturate(140%);
         -webkit-backdrop-filter: blur(22px) saturate(140%);
-        border: 1px solid rgba(255,255,255,0.14);
-        box-shadow: 0 36px 90px rgba(0,0,0,0.5);
+        /* --flash：雷落下那一刻描边 / 顶亮线 / 角刻线跟着一闪（tick 里逐帧写进来） */
+        border: 1px solid rgba(255, 255, 255, calc(0.14 + var(--flash, 0) * 0.55));
+        box-shadow: 0 36px 90px rgba(0,0,0,0.5),
+                    inset 0 1px 0 rgba(255,255,255,calc(var(--flash, 0) * 0.5));
         padding: 26px 28px 22px;
         position: relative;
     }
     /* 角标记：仪器面板的四角刻线 */
     .main-card::before, .main-card::after {
         content: ''; position: absolute; width: 14px; height: 14px;
-        border: 1px solid rgba(255,255,255,0.4);
+        border: 1px solid rgba(255,255,255,calc(0.4 + var(--flash, 0) * 0.4));
     }
     .main-card::before { top: -1px; left: -1px; border-right: none; border-bottom: none; }
     .main-card::after  { bottom: -1px; right: -1px; border-left: none; border-top: none; }
@@ -1098,6 +1100,9 @@ function makeSoftFlake(rgb) {
 }
 const softFlakeFar = makeSoftFlake('205,210,228');    /* 远层偏灰 */
 const softFlakeNear = makeSoftFlake('222,228,253');   /* 中 / 近层微蓝白 */
+let snowAir = 0;       /* 空中雪的显隐：进雪 1 秒亮起，离开雪 4 秒左右从空气里化掉 */
+/* 卡片顶沉积按 A 校准（近/中/远 ≈ 3.2 / 2.0 / 1.1）：只乘在卡片那一路，山脊积雪率不动 */
+const SNOW_CARD_MASS = 1.44;
 
 /* 三档景深：r / alpha / 竖直速度（px/帧）/ 抽中权重（远:中:近 ≈ 5:3:1.5）/ 积雪质量与铺展半径 */
 const SNOW_TIERS = [
@@ -1112,7 +1117,12 @@ const randIn = (lo, hi) => lo + Math.random() * (hi - lo);
 const SNOW_RES = 3;
 let snowField = new Float32Array(0);
 function resizeSnowField() {
-    snowField = new Float32Array(Math.ceil(Math.max(1, cardRect.width) / SNOW_RES) + 2);
+    const n = Math.ceil(Math.max(1, cardRect.width) / SNOW_RES) + 2;
+    if (snowField.length === n) return;          /* 宽度没变就不动：换天气不清雪堆（之前一刀切没了） */
+    const nf = new Float32Array(n);
+    for (let i = 0; i < n && snowField.length; i++)
+        nf[i] = snowField[Math.min(snowField.length - 1, Math.round(i * snowField.length / n))] || 0;
+    snowField = nf;
 }
 
 class SnowFlake {
@@ -1143,6 +1153,8 @@ class SnowFlake {
         this.kind = 'snow';
     }
     step(dt, s) {
+        /* 天气走了、空中的雪也化了：不再在太阳底下飘一分钟 */
+        if (snowAir < 0.03 && W.snow < 0.5) { this.dead = true; return; }
         const dtf = dt / 16;
         const f = dtf * (0.6 + s * 0.5);
         this.ph += dt * this.omega;
@@ -1166,7 +1178,7 @@ class SnowFlake {
                         const eCap = cap * Math.min(1, edge / 12);
                         /* 指数沉积核：一片雪堆出圆丘不是柱子 */
                         if (snowField[j] < eCap)
-                            snowField[j] += this.mass * Math.exp(-Math.abs(i) / 2.2) * 0.85;
+                            snowField[j] += this.mass * SNOW_CARD_MASS * Math.exp(-Math.abs(i) / 2.2) * 0.85;
                     }
                 }
                 this.dead = true;
@@ -1193,7 +1205,7 @@ class SnowFlake {
         /* 近层轻微 alpha 呼吸（0.9–1.0 倍），远 / 中层恒定；不旋转、不描边 */
         const a = this.tier === 2 ? this.o * (0.95 + 0.05 * Math.sin(this.ph * 1.7)) : this.o;
         const d = this.r * 2.4;
-        g.globalAlpha = a;
+        g.globalAlpha = a * snowAir;
         g.drawImage(this.sprite, this.x - d / 2, this.y - d / 2, d, d);
         g.globalAlpha = 1;
     }
@@ -1204,8 +1216,10 @@ class SnowFlake {
    层序与透镜 ① 一致：astro → cloud → scene → fx → bolt。天空是 CSS 渐变不在 canvas 上，
    取到的透明处露出卡片玻璃本身。各层的视差已画进位图，屏幕坐标只需乘各 canvas 的 dpr。 */
 const SCENE_SAMPLE_LAYERS = ['astro', 'cloud', 'scene', 'fx', 'bolt'];
-function drawSceneRegion(g, sx, sy, srx, sry, dx, dy, dw, dh) {
-    for (const k of SCENE_SAMPLE_LAYERS) {
+/* 冰粒本身画在 fx 层上：它的折射取样不含 fx（canvas 画自己每次都整张快照拷贝，几十颗就掉帧） */
+const HAIL_SAMPLE_LAYERS = ['astro', 'cloud', 'scene', 'bolt'];
+function drawSceneRegion(g, sx, sy, srx, sry, dx, dy, dw, dh, layers) {
+    for (const k of (layers || SCENE_SAMPLE_LAYERS)) {
         const cv = cvs[k];
         const kx = cv.width / vw, ky = cv.height / vh;
         try {
@@ -1277,6 +1291,13 @@ class GlassDrop {
             this.lastSpawn = 0; this.spawnThresh = 999; this.dead = false;
             return;
         }
+        if (opts && opts.melt) {
+            /* 化雪淌下来的水：从卡片顶出发，带着分量往下走，蒸发得慢 */
+            this.x = opts.x; this.y = opts.y; this.r = opts.r; this.rMax = opts.r;
+            this.isTrail = false; this.isMelt = true; this.momentum = 1.6 + Math.random() * 1.2; this.aspect = 1.2;
+            this.lastSpawn = 0; this.spawnThresh = 12 + Math.random() * 16; this.dead = false;
+            return;
+        }
         /* 雨点打在玻璃上随机出现，小小的一粒再慢慢长大 */
         this.x = 2 + Math.random() * Math.max(1, cardRect.width - 4);
         this.y = 2 + Math.random() * Math.max(1, cardRect.height - 4);
@@ -1298,13 +1319,13 @@ class GlassDrop {
             return;
         }
         if (wet < 0.25) {
-            this.r -= 0.01 * dtf;                        /* 雨停：慢慢蒸发 */
+            this.r -= (this.isMelt ? 0.0035 : 0.01) * dtf;   /* 雨停：慢慢蒸发 */
             if (this.r < 0.6) this.dead = true;
         } else if (this.r < this.rMax) {
             this.r += 0.014 * (0.5 + s) * wet * dtf;      /* 挂着长大 */
         }
-        /* 蠕滑触发：有分量了才会动，越大越容易动，小珠钉死 */
-        if (this.r > 2.3 && Math.random() < (this.r - 2.3) * 0.0055 * dtf)
+        /* 蠕滑触发：有分量了才会动，越大越容易动，小珠钉死；化雪水一路往下跑 */
+        if (this.r > 2.3 && Math.random() < (this.r - 2.3) * 0.0055 * (this.isMelt ? 9 : 1) * dtf)
             this.momentum += Math.random() * (this.r / 6.5) * 3;
         /* 摩擦把动量磨回零：走一段、停一下 */
         this.momentum = Math.min(8, Math.max(0,
@@ -1419,6 +1440,8 @@ function drawCardFx(dt, s) {
     }
 }
 
+const restGround = [];   /* 落在山脊上躺着的冰粒 */
+let lensHit = 0;         /* 冰粒砸到棱镜的一瞬（镜缘白一下） */
 class Hailstone {
     constructor() {
         const st = styleSel.hail;
@@ -1426,19 +1449,27 @@ class Hailstone {
         this.sprite = hailSprites[(Math.random() * hailSprites.length) | 0];
         this.x = Math.random() * (vw + 320) - 160;
         this.y = -30 - Math.random() * vh * 0.5;
-        this.r = big ? 3 + Math.random() * 4.2 : 1.8 + Math.random() * 2.6;
-        this.vy = big ? 10.5 + Math.random() * 8 : 14 + Math.random() * 11;
+        this.r = big ? 3.6 + Math.random() * 4.8 : 2.2 + Math.random() * 2.4;
+        /* 终末速度随尺寸：大颗砸得快（v ∝ √d 的粗略版） */
+        this.vy = 6.5 + this.r * 1.2 + Math.random() * 3;
+        this.vx = 0;
         this.rot = Math.random() * Math.PI * 2;
         this.vrot = (Math.random() - 0.5) * 0.14;
-        this.bounces = 0;
+        this.bounces = 0; this.ground = 0;
         this.dead = false;
         this.kind = 'hail';
+    }
+    kick(hard) {
+        /* 弹开的方向随形状乱：横向甩一下、转速换 */
+        this.vx += (Math.random() - 0.5) * (2.2 + hard * 0.16);
+        this.vrot = (Math.random() - 0.5) * 0.3;
     }
     step(dt, s) {
         const f = (dt / 16) * s;
         this.vy += 0.36 * f;
-        /* 风 + 视角（摇动/拖动改变下落方向） */
-        this.x += (wind.x * 1.9 + par.x * 2.8) * f;
+        this.vx *= Math.pow(0.975, f);
+        /* 风 + 视角（摇动/拖动改变下落方向）+ 弹开的横向分量 */
+        this.x += (wind.x * 1.9 + par.x * 2.8 + this.vx) * f;
         this.y += this.vy * f;
         this.rot += this.vrot * f;
 
@@ -1449,42 +1480,76 @@ class Hailstone {
             this.y = cardRect.top - this.r;
             const hard = this.vy;
             impacts.push({ x: this.x, y: cardRect.top, r: this.r, life: 1 });
-            if (this.r > 4.5) {
+            /* 碎裂阈值按风格：碎冰暴几乎首撞必碎，琉璃珠以弹跳为主 */
+            const shatterR = styleSel.hail === 'shatter' ? 2.2 : 6;
+            if (this.r > shatterR) {
                 /* 大颗：脆，放射状炸裂，不弹 */
                 spawnShards(this.x, cardRect.top, this.r, hard, 1.2);
                 this.dead = true;
                 if (Math.random() < 0.3 && restHail.length < 36)
-                    restHail.push({ x: this.x + (Math.random() - 0.5) * 10, r: this.r * 0.6, life: 1 });
+                    restHail.push({ x: this.x + (Math.random() - 0.5) * 10, r: this.r * 0.6, life: 1, sprite: this.sprite });
                 return;
             }
-            /* 中小颗：低弹，第二跳再衰减一档 */
-            const e = (0.22 + Math.random() * 0.12) * (this.bounces ? 0.55 : 1);
+            /* 中小颗：弹开（方向乱），第二跳再衰减一档 */
+            const e = (0.26 + Math.random() * 0.16) * (this.bounces ? 0.55 : 1);
             this.vy = -this.vy * e;
-            this.x += (Math.random() - 0.5) * 2;
+            this.kick(hard);
             this.bounces++;
             spawnShards(this.x, cardRect.top, this.r, hard, 0.4);
             if (Math.random() < 0.12 && restHail.length < 36)
-                restHail.push({ x: this.x + (Math.random() - 0.5) * 12, r: this.r * 0.7, life: 1 });
+                restHail.push({ x: this.x + (Math.random() - 0.5) * 12, r: this.r * 0.7, life: 1, sprite: this.sprite });
         }
-
-        /* B 的落点：最前层山脊（不是地面）——碎裂 + 积雹 + 偶尔白汽 */
+        /* 砸在棱镜上：镜面是硬玻璃，沿法线弹开 */
+        if (lens.on && this.vy > 0) {
+            const nx = this.x - lens.x, ny = this.y - lens.y, nl = Math.hypot(nx, ny) || 1;
+            const RL = lens.D / 2;
+            if (nl < RL + this.r && nl > RL - this.vy * f - this.r) {
+                const hard = this.vy;
+                impacts.push({ x: this.x, y: this.y, r: this.r, life: 1 });
+                spawnShards(this.x, this.y, this.r, hard, 0.5);
+                const ux = nx / nl, uy = ny / nl;
+                const dot = this.vx * ux + this.vy * uy;
+                this.vx -= 1.5 * dot * ux; this.vy -= 1.5 * dot * uy;
+                this.vx *= 0.6; this.vy *= 0.6;
+                this.x = lens.x + ux * (RL + this.r + 1); this.y = lens.y + uy * (RL + this.r + 1);
+                this.kick(hard);
+                lensHit = Math.min(1, lensHit + 0.4);
+            }
+        }
+        /* B 的落点：最前层山脊（不是地面）——先跳一下（冰粒在硬石上会弹），
+           再躺下慢慢化：碎冰 + 山脊积雹白线 + 水渍 + 偶尔白汽 */
         if (this.vy > 0) {
             const idx = (this.x / RIDGE_RES) | 0;
             const iceH = (idx >= 0 && idx < ridgeField.length) ? ridgeField[idx] : 0;
             const ry = ridgeYAt(this.x) - iceH;
-            if (this.y >= ry) {
-                spawnShards(this.x, ry, this.r, this.vy, 1);
-                const cap = 16;
-                for (let i = -2; i <= 2; i++) {
-                    const j = idx + i;
-                    if (j >= 0 && j < ridgeField.length && ridgeField[j] < cap)
-                        ridgeField[j] += this.r * 0.4 * (1 - Math.abs(i) * 0.28);
+            if (this.y >= ry - this.r) {
+                if (this.x > -20 && this.x < vw + 20) {
+                    if (this.ground < 1 && this.vy > 5) {
+                        this.y = ry - this.r;
+                        const hard = this.vy;
+                        this.vy = -this.vy * (0.3 + Math.random() * 0.2);
+                        this.kick(hard);
+                        this.ground++;
+                        spawnShards(this.x, ry, this.r, hard, 0.6);
+                        impacts.push({ x: this.x, y: ry, r: this.r, life: 1, ridge: true });
+                        return;
+                    }
+                    spawnShards(this.x, ry, this.r, this.vy, 0.7);
+                    const cap = 16;
+                    for (let i = -2; i <= 2; i++) {
+                        const j = idx + i;
+                        if (j >= 0 && j < ridgeField.length && ridgeField[j] < cap)
+                            ridgeField[j] += this.r * 0.4 * (1 - Math.abs(i) * 0.28);
+                    }
+                    if (restGround.length < 90)
+                        restGround.push({ x: this.x, r: this.r, sprite: this.sprite, rot: this.rot, life: 1, vx: this.vx * 0.4 });
+                    if (puddles.length < 60) {
+                        puddles.push({ x: this.x, y: ry + 1, r: this.r * (1.4 + Math.random()), life: 1 });
+                        /* 冰磕在石头上化出一点水光；夏天的脊线偶尔冒一缕白汽 */
+                        if (Math.random() < 0.3 && mists.length < 24)
+                            mists.push({ x: this.x, y: ry - 5, r: 4 + Math.random() * 5, life: 1 });
+                    }
                 }
-                /* 冰磕在石头上化出一点水光；夏天的脊线偶尔冒一缕白汽 */
-                if (Math.random() < 0.2 && puddles.length < 60)
-                    puddles.push({ x: this.x, y: ry + 1, r: this.r * (1.4 + Math.random()), life: 1 });
-                if (Math.random() < 0.3 && mists.length < 24)
-                    mists.push({ x: this.x, y: ry - 5, r: 4 + Math.random() * 5, life: 1 });
                 this.dead = true;
                 return;
             }
@@ -1493,26 +1558,47 @@ class Hailstone {
         if (this.x > vw + vw * 0.45 || this.x < -vw * 0.45) this.dead = true;
     }
     draw(g) {
-        const vx = wind.x * 1.9 + par.x * 2.8;
+        const vx = wind.x * 1.9 + par.x * 2.8 + this.vx;
         const sp = Math.hypot(vx, this.vy);
         if (sp > 6) {
+            /* 运动模糊：短短一截、尾部渐隐（不是吊着一根线） */
+            const tx = this.x - vx * 1.5, ty = this.y - this.vy * 1.5;
+            const tg = g.createLinearGradient(tx, ty, this.x, this.y);
+            tg.addColorStop(0, 'rgba(222,236,250,0)');
+            tg.addColorStop(1, 'rgba(232,242,252,0.2)');
             g.save();
-            g.strokeStyle = 'rgba(222,236,250,0.13)';
+            g.strokeStyle = tg;
             g.lineWidth = this.r * 1.1;
             g.lineCap = 'round';
             g.beginPath();
-            g.moveTo(this.x - vx * 2.2, this.y - this.vy * 2.2);
+            g.moveTo(tx, ty);
             g.lineTo(this.x, this.y);
             g.stroke();
             g.restore();
         }
+        /* 山脊组整层带着最前层山的视差平移：折射取样点补回屏幕坐标 */
+        drawHailstone(g, this.x, this.y, this.r, this.rot, this.sprite, 1, par.x * MPX[2], par.y * MPY[2]);
+    }
+}
+/* 一颗冰的画法：透明的冰把身后的景折进来（取场景各层、倒着、缩一点——跟水珠同一套光学），
+   再罩上冰壳 sprite（乳白核 + 高光）。小颗只画 sprite（看不出折射）。
+   (ox, oy) = 所在绘制组的视差平移：取样要用屏幕坐标（山脊组带 MPX[2]/MPY[2]，卡片组为 0） */
+function drawHailstone(g, x, y, r, rot, sprite, o, ox, oy) {
+    if (r >= 2.6) {
         g.save();
-        g.translate(this.x, this.y);
-        g.rotate(this.rot);
-        const d = this.r * 2.6;
-        g.drawImage(this.sprite, -d / 2, -d / 2, d, d);
+        g.beginPath(); g.arc(x, y, r * 1.02, 0, Math.PI * 2); g.clip();
+        g.globalAlpha = 0.6 * o;
+        g.translate(x, y); g.scale(1, -1);
+        drawSceneRegion(g, x + (ox || 0), y + (oy || 0), r * 1.8, r * 1.8, -r * 1.15, -r * 1.15, r * 2.3, r * 2.3, HAIL_SAMPLE_LAYERS);
         g.restore();
     }
+    g.save();
+    g.globalAlpha = o;
+    g.translate(x, y);
+    g.rotate(rot);
+    const d = r * 2.6;
+    g.drawImage(sprite, -d / 2, -d / 2, d, d);
+    g.restore();
 }
 
 function spawnShards(x, y, r, impact, mul) {
@@ -1606,10 +1692,12 @@ function spawnParticles(dt) {
     const ft = dt / 16;   /* 概率按 dt 归一：120Hz 下密度不再翻倍 */
     const s = intensity / 100;
     const wHail = weightOf('hail'), wDust = weightOf('dust');
-    const hailRate = wHail * s * (styleSel.hail === 'shatter' ? 1.1 : 0.42) * ft;
+    const hailRate = wHail * s * (styleSel.hail === 'shatter' ? 1.1 : 0.55) * ft;
     if (Math.random() < hailRate) parts.push(new Hailstone());
     /* 雪：比雨密、比雨慢（存活久，稳态池大，率不能高） */
-    const snowRate = weightOf('snow') * (0.32 + s * 0.85) * ft;
+    const wSnow = weightOf('snow');
+    snowAir += ((wSnow > 0.5 ? 1 : 0) - snowAir) * (wSnow > 0.5 ? 0.05 : 0.012) * ft;
+    const snowRate = wSnow * (0.32 + s * 0.85) * ft;
     for (let i = 0; i < Math.ceil(snowRate); i++)
         if (Math.random() < snowRate - i) parts.push(new SnowFlake());
     /* 彩虹的残雨在十几秒内彻底停掉（雨停了虹才站稳，最后走向放晴） */
@@ -1671,6 +1759,30 @@ function drawParticles(dt) {
         g.lineWidth = 0.6;
         g.stroke();
     }
+    /* 落在山脊上的冰粒：躺着慢慢化（冰雹天化得慢），越化越小、越透；
+       躺在积雹白线之上，跟山脊同一份视差 */
+    const gmelt = (W.hail > 0.5 ? 0.0011 : 0.006) * (dt / 16);
+    for (let i = restGround.length - 1; i >= 0; i--) {
+        const h = restGround[i];
+        h.life -= gmelt;
+        h.x += h.vx * (dt / 16); h.vx *= 0.9;
+        if (h.life <= 0) { restGround.splice(i, 1); continue; }
+        const rr = h.r * (0.5 + 0.5 * h.life);
+        const ridx = (h.x / RIDGE_RES) | 0;
+        const iceH = (ridx >= 0 && ridx < ridgeField.length) ? ridgeField[ridx] : 0;
+        drawHailstone(g, h.x, ridgeYAt(h.x) - iceH - rr * 0.85, rr, h.rot, h.sprite, Math.min(1, h.life * 1.6),
+            par.x * MPX[2], par.y * MPY[2]);
+    }
+    /* 山脊上的磕击白印（第一跳）：归山脊组画，寿命在下面卡片组那一趟里统一递减 */
+    for (const im of impacts) {
+        if (!im.ridge) continue;
+        const rr = im.r * (1.2 + (1 - im.life) * 2.2);
+        g.strokeStyle = `rgba(240,248,255,${0.5 * im.life})`;
+        g.lineWidth = 1.1;
+        g.beginPath();
+        g.ellipse(im.x, im.y, rr, rr * 0.35, 0, Math.PI, 0);
+        g.stroke();
+    }
     /* 融化白汽：缓慢上升的雾团 */
     for (let i = mists.length - 1; i >= 0; i--) {
         const m = mists[i];
@@ -1699,6 +1811,7 @@ function drawParticles(dt) {
         const im = impacts[i];
         im.life -= 0.08 * (dt / 16);
         if (im.life <= 0) { impacts.splice(i, 1); continue; }
+        if (im.ridge) continue;      /* 山脊上的磕击环已在山脊组画过 */
         const rr = im.r * (1.2 + (1 - im.life) * 2.2);
         g.strokeStyle = `rgba(240,248,255,${0.5 * im.life})`;
         g.lineWidth = 1.1;
@@ -1712,25 +1825,40 @@ function drawParticles(dt) {
         const h = restHail[i];
         h.life -= melt * (dt / 16);
         if (h.life <= 0) { restHail.splice(i, 1); continue; }
-        g.fillStyle = `rgba(232,244,255,${0.62 * h.life})`;
-        g.beginPath();
-        g.ellipse(h.x, cardRect.top - h.r * h.life * 0.4, h.r, h.r * h.life * 0.75, 0, Math.PI, 0);
-        g.fill();
+        /* 卡片顶上躺着的冰粒：同一种乳白冰，越化越小（卡片组不平移，取样点就是屏幕坐标） */
+        const rr = h.r * (0.55 + 0.45 * h.life);
+        drawHailstone(g, h.x, cardRect.top - rr * 0.8, rr, 0, h.sprite || hailSprites[0], Math.min(1, h.life * 1.6));
     }
     /* 卡片顶积雪（高度场：融化、平滑、绘制——继承《落雪与积雪》）。
        卡片是 DOM 不吃 canvas 视差，归卡片组画在世界坐标；雪堆在卡片顶边之上，
        card-canvas 夹层 inset:0 画不到顶边以上，所以留在这层 */
     let hasSnowAcc = false;
-    const snowMelt = (W.snow > 0.5 ? 0.0016 : 0.028) * (dt / 16);
+    /* 融化率连续：雪天极慢，离开雪天加快（不再是一刀切成 17 倍）。
+       B 的 profile 没有 sun 字段：A 里 sun 那一份并进离雪份量，放晴时两版同为 0.02 */
+    const thaw = (1 - Math.min(1, W.snow * 1.2)) * 0.02;
+    const snowMelt = (0.0006 + thaw) * (dt / 16);
+    let snowMass = 0;
     for (let i = 0; i < snowField.length; i++) {
         if (snowField[i] > 0) {
             snowField[i] -= snowMelt;
+            snowMass += snowField[i];
             if (i > 0 && i < snowField.length - 1)
                 snowField[i] = snowField[i] * 0.9 + (snowField[i - 1] + snowField[i + 1]) * 0.05;
             if (snowField[i] < 0) snowField[i] = 0; else hasSnowAcc = true;
         }
     }
+    /* 化雪滴水：雪堆在化、还够厚，就从堆底往玻璃上淌一滴——跟雨珠同一套物理，顺着卡片跑、汇进底下的积水 */
+    if (thaw > 0.003 && snowMass > 6 && Math.random() < thaw * 2.4 * (dt / 16) && glassDrops.length < 150) {
+        const cands = [];
+        for (let i = 2; i < snowField.length - 2; i += 2) if (snowField[i] > 2) cands.push(i);
+        if (cands.length) {
+            const i = cands[(Math.random() * cands.length) | 0];
+            glassDrops.push(new GlassDrop({ melt: true, x: i * SNOW_RES, y: 1 + Math.random() * 3, r: 2.3 + Math.random() * 1.1 }));
+        }
+    }
     if (hasSnowAcc) {
+        /* 化着的雪发湿、发灰、透一点 */
+        const th = 1 - Math.min(1, W.snow * 1.3);
         g.save();
         g.beginPath();
         g.moveTo(cardRect.left, cardRect.top + 1);
@@ -1738,7 +1866,7 @@ function drawParticles(dt) {
             g.lineTo(cardRect.left + i * SNOW_RES, cardRect.top - snowField[i]);
         g.lineTo(cardRect.right, cardRect.top + 1);
         g.closePath();
-        g.fillStyle = 'rgba(250,252,255,0.92)';
+        g.fillStyle = `rgba(${250 - 16 * th | 0},${252 - 10 * th | 0},255,${0.92 * (0.6 + 0.4 * (1 - th))})`;
         g.fill();
         /* 雪面亮边 */
         g.strokeStyle = 'rgba(255,255,255,0.45)';
@@ -1757,7 +1885,7 @@ function drawParticles(dt) {
     }
     /* 卡片内夹层：落雨的折射水珠与积水（card-canvas，卡片局部坐标） */
     drawCardFx(dt, s);
-    const n = parts.length + shards.length + glassDrops.length;
+    const n = parts.length + shards.length + glassDrops.length + restGround.length;
     $('m-count').textContent = n;
     $('b-count').style.transform = `scaleX(${Math.min(1, n / 700)})`;
 }
@@ -1817,7 +1945,7 @@ function fireBolt() {
         strokeBolt(og, br, 3.5, 'rgba(150,140,255,0.11)', 18, 'rgba(140,130,255,0.8)');
         strokeBolt(og, br, 0.8, 'rgba(255,255,255,0.55)', 0, 'transparent');
     });
-    bolts.push({ cv, life: 1 });
+    bolts.push({ cv, life: 1, main, x: x0, y: y1 * 0.45 });   /* x/y：镜面眩光朝向这道闪 */
     /* 雷击带阵风：下一两秒的雨和冰雹一起被带斜 */
     wind.gust += 0.8 + Math.random();
 
@@ -1946,10 +2074,10 @@ $('slider').addEventListener('input', e => {
 });
 
 let flashNow = 0;       /* 当前白闪不透明度（每帧读一次，珠子/镜面跟着亮） */
+let cardFlashSet = false;
 function tick(now) {
     const dt = Math.min(40, now - lastT);
     lastT = now;
-    flashNow = bolts.length ? (+getComputedStyle(document.getElementById('flash')).opacity || 0) : 0;
     for (const k in W) {
         const target = k === current ? 1 : 0;
         W[k] += (target - W[k]) * 0.026 * (dt / 16);
@@ -1957,6 +2085,12 @@ function tick(now) {
     }
     stepWind(dt);
     stepParallax(dt, now);
+    flashNow = (W.storm > 0.02 || bolts.length) ? (+getComputedStyle($('flash')).opacity || 0) : 0;
+    /* 雷落下那一刻：卡片描边与顶亮线跟着一闪（CSS 变量进 calc） */
+    if (flashNow > 0.01 || cardFlashSet) {
+        $('card').style.setProperty('--flash', flashNow.toFixed(3));
+        cardFlashSet = flashNow > 0.01;
+    }
     /* 彩虹态时间演化：残雨停 → 云散 → 文案收尾 */
     if (current === 'rainbow') {
         rbAge += dt / 1000;
@@ -2083,13 +2217,22 @@ function drawLens(dt) {
     const ldl = Math.hypot(ldx, ldy) || 1;
     ldx /= ldl; ldy /= ldl;
 
-    /* ① 场景四层合成取样（canvas 位图是 dpr 倍） */
+    /* ① 场景四层合成取样（canvas 位图是 dpr 倍）；闪电层不在这里叠，见 ①b */
     const dpr = Math.min(devicePixelRatio || 1, 2);
     const srcD = D / M;
     const sxp = (lens.x - srcD / 2) * dpr, syp = (lens.y - srcD / 2) * dpr;
-    [cvs.astro, cvs.cloud, cvs.scene, cvs.fx, cvs.bolt].forEach(cv => {
+    [cvs.astro, cvs.cloud, cvs.scene, cvs.fx].forEach(cv => {
         try { lensG.drawImage(cv, sxp, syp, srcD * dpr, srcD * dpr, 0, 0, D, D); } catch (e) {}
     });
+    /* ①b 闪电：镜子层在闪电层之上，不取样的话镜里看不到雷。把此刻的闪电层（含云内闪）
+       按同一放大率折进镜里——雷落下那一刻，镜内先亮起来的是那道闪本身 */
+    if (bolts.length || sheet) {
+        const bs = cvs.bolt.width / vw;
+        lensG.save();
+        lensG.globalCompositeOperation = 'screen';
+        lensG.drawImage(cvs.bolt, (lens.x - srcD / 2) * bs, (lens.y - srcD / 2) * bs, srcD * bs, srcD * bs, 0, 0, D, D);
+        lensG.restore();
+    }
     /* ② 彩虹：棱镜再色散——拉宽 + RGB 沿光轴分离 */
     const rbVis = weightOf('rainbow');
     if (rbCache && rbGrow > 0.02 && rbVis > 0.02) {
@@ -2127,14 +2270,15 @@ function drawLens(dt) {
     /* ③ 色散镶边（色相随天气） */
     const f0 = mixFringe(0), f1 = mixFringe(1), f2 = mixFringe(2), f3 = mixFringe(3), f4 = mixFringe(4);
     const fr = lensG.createRadialGradient(R, R, R * 0.6, R, R, R);
+    const fA = 1 + 1.6 * flashNow;                 /* 闪电照进来时色散镶边跟着亮 */
     fr.addColorStop(0, 'rgba(255,255,255,0)');
     fr.addColorStop(0.64, 'rgba(255,255,255,0)');
-    fr.addColorStop(0.75, `rgba(${f0[0]},${f0[1]},${f0[2]},0.10)`);
-    fr.addColorStop(0.82, `rgba(${f1[0]},${f1[1]},${f1[2]},0.12)`);
-    fr.addColorStop(0.88, `rgba(${f2[0]},${f2[1]},${f2[2]},0.12)`);
-    fr.addColorStop(0.93, `rgba(${f3[0]},${f3[1]},${f3[2]},0.13)`);
-    fr.addColorStop(0.975, `rgba(${f4[0]},${f4[1]},${f4[2]},0.14)`);
-    fr.addColorStop(1, `rgba(${f4[0]},${f4[1]},${f4[2]},0.05)`);
+    fr.addColorStop(0.75, `rgba(${f0[0]},${f0[1]},${f0[2]},${0.10 * fA})`);
+    fr.addColorStop(0.82, `rgba(${f1[0]},${f1[1]},${f1[2]},${0.12 * fA})`);
+    fr.addColorStop(0.88, `rgba(${f2[0]},${f2[1]},${f2[2]},${0.12 * fA})`);
+    fr.addColorStop(0.93, `rgba(${f3[0]},${f3[1]},${f3[2]},${0.13 * fA})`);
+    fr.addColorStop(0.975, `rgba(${f4[0]},${f4[1]},${f4[2]},${0.14 * fA})`);
+    fr.addColorStop(1, `rgba(${f4[0]},${f4[1]},${f4[2]},${0.05 * fA})`);
     lensG.save();
     lensG.globalCompositeOperation = 'screen';
     lensG.fillStyle = fr;
@@ -2196,15 +2340,38 @@ function drawLens(dt) {
             });
         });
     }
+    /* 雷落下那一刻：朝闪电那一侧的镜缘先亮起来（veiling glare），整面再泛一层白，
+       镜缘亮弧转向闪电——光源从破晓光心换成了那道闪 */
+    let boltAng = null;
     if (flashNow > 0.02) {
-        lensG.fillStyle = `rgba(237,240,255,${flashNow * 0.9})`;
+        const b = bolts[bolts.length - 1];
+        let bx = -ldx, by = -ldy;
+        if (b) { const dx = b.x - lens.x, dy = b.y - lens.y, dl = Math.hypot(dx, dy) || 1; bx = dx / dl; by = dy / dl; }
+        boltAng = Math.atan2(by, bx);
+        lensG.save();
+        lensG.globalCompositeOperation = 'screen';
+        const gx = R + bx * R, gy = R + by * R;
+        const vg = lensG.createRadialGradient(gx, gy, 0, gx, gy, R * 1.3);
+        vg.addColorStop(0, `rgba(226,222,255,${Math.min(1, 1.3 * flashNow)})`);
+        vg.addColorStop(0.45, `rgba(226,222,255,${0.55 * flashNow})`);
+        vg.addColorStop(1, 'rgba(226,222,255,0)');
+        lensG.fillStyle = vg; lensG.fillRect(0, 0, D, D);
+        lensG.fillStyle = `rgba(237,240,255,${Math.min(1, flashNow * 0.8)})`;
         lensG.fillRect(0, 0, D, D);
+        lensG.restore();
     }
-    /* ⑦ 高光：贴镜缘朝光源的细弧 */
-    let hlA = 0.26 * wClearL + 0.2 * rbVis + 0.1 * frostGrow;
+    /* 冰粒砸到镜面：镜缘白一下 */
+    if (lensHit > 0.01) {
+        lensG.strokeStyle = `rgba(255,255,255,${0.55 * lensHit})`;
+        lensG.lineWidth = 2;
+        lensG.beginPath(); lensG.arc(R, R, R - 2.5, 0, Math.PI * 2); lensG.stroke();
+        lensHit *= Math.pow(0.86, dt / 16);
+    }
+    /* ⑦ 高光：贴镜缘朝光源的细弧（雷落下时转向闪电） */
+    let hlA = 0.26 * wClearL + 0.2 * rbVis + 0.1 * frostGrow + 0.6 * flashNow;
     if (wStorm > 0.05) hlA += bolts.length ? 0.26 * wStorm : 0.04 * wStorm;
     if (hlA > 0.015) {
-        const hlAng = Math.atan2(-ldy, -ldx);
+        const hlAng = boltAng != null ? boltAng : Math.atan2(-ldy, -ldx);      /* 指向光源 */
         lensG.strokeStyle = `rgba(255,255,255,${hlA})`;
         lensG.lineCap = 'round';
         lensG.lineWidth = 2.4;
