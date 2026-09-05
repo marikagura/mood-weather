@@ -54,6 +54,8 @@
     /* 棱镜放大镜（观测站的手持镜） */
     #lens-canvas {
         position: fixed; z-index: 30;
+        inset: auto;                 /* 上面那条 canvas 通用规则给了 inset:0 和 pointer-events:none，镜子要能定位、能拖 */
+        pointer-events: auto;
         display: none;
         border-radius: 50%;
         cursor: grab;
