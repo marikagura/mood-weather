@@ -33,7 +33,7 @@
 
 为了找可以直接抄的东西，审过 40 余个开源天气 / 玻璃效果实现（许可逐一核过）。值得记一笔、但最终没有采用的：
 
-- 「2D Clouds」（drift，Shadertoy 4tdSWr）：作者在评论区明确授权任意使用；是 GLSL 方案，本仓库的云用 canvas 2D 自行实现了同类 fbm 做法。
+- 「2D Clouds」（drift，Shadertoy 4tdSWr）：作者在评论区明确授权任意使用；是 GLSL 方案。本仓库试过 canvas 2D 的 fbm 积云，叠在照片上不好看，最终没有采用程序化积云。
 - liquid-glass（Shu Ding，MIT）：SVG 位移贴图的玻璃折射，只在 Chromium 生效，iOS Safari 不支持，故未用于卡片。
 - three.js `LightningStrike`（MIT，r152 及以前）：3D 分形闪电，对单文件 canvas 2D 页面过重。
 - 「Falling Snow with Accumulation」（Simon，CodePen，MIT）：高度场积雪与融化循环，与朋友原作的做法同源，未复制。
